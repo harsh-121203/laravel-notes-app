@@ -1,0 +1,653 @@
+@extends('layouts.app')
+
+@section('title', 'Workspace • Tasks & Notes')
+
+@section('styles')
+<style>
+    /* Two Column Split Architecture (Linux App / Todoist Clean aesthetic) */
+    .columns-container {
+        display: grid;
+        grid-template-columns: 1fr 1.05fr;
+        gap: 2.5rem;
+        align-items: start;
+    }
+
+    @media (max-width: 950px) {
+        .columns-container {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+    }
+
+    /* Column Headers */
+    .column-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-line);
+    }
+
+    .column-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--text-title);
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .counter-pill {
+        font-size: 0.725rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        background: #f0f0f0;
+        padding: 0.15rem 0.5rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .header-subtext {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    /* ================= LEFT SIDE: TASKS & SUBTASKS ================= */
+
+    /* Quick Add Task Input Box with tactile press states */
+    .quick-task-box {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    .quick-task-input {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 2.4rem;
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-title);
+        background: var(--bg-surface);
+        border: 1.5px solid #171717;
+        border-radius: var(--radius-sm);
+        box-shadow: 2px 2px 0px #171717;
+        outline: none;
+        transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .quick-task-input:focus {
+        transform: translate(-1px, -1px);
+        box-shadow: 3px 3px 0px #171717;
+    }
+    .quick-task-input:active {
+        transform: translate(1px, 1px);
+        box-shadow: 1px 1px 0px #171717;
+    }
+
+    .quick-input-symbol {
+        position: absolute;
+        left: 0.85rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.1rem;
+        color: var(--text-muted);
+        pointer-events: none;
+        user-select: none;
+        font-family: monospace;
+    }
+
+    /* Clean Tree / List UI for Tasks */
+    .tasks-stream {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--border-line);
+        background: var(--bg-surface);
+        border-radius: var(--radius-md);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        overflow: hidden;
+    }
+
+    .task-entry {
+        border-bottom: 1px solid var(--border-subtle);
+        transition: background-color 0.12s ease;
+    }
+    .task-entry:last-child {
+        border-bottom: none;
+    }
+    .task-entry:hover {
+        background-color: #fafafa;
+    }
+
+    .task-main-row {
+        display: flex;
+        align-items: flex-start;
+        padding: 0.85rem 1rem;
+        gap: 0.75rem;
+    }
+
+    /* Clean Round GTK/Todoist Checkbox */
+    .round-checkbox {
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border: 1.5px solid #a3a3a3;
+        border-radius: 50%;
+        cursor: pointer;
+        display: grid;
+        place-content: center;
+        margin-top: 2px;
+        flex-shrink: 0;
+        transition: all 0.1s ease;
+        background: #ffffff;
+    }
+    .round-checkbox:hover {
+        border-color: #171717;
+        transform: scale(1.05);
+    }
+    .round-checkbox:active {
+        transform: scale(0.92);
+    }
+    .round-checkbox:checked {
+        background-color: var(--forest);
+        border-color: var(--forest);
+    }
+    .round-checkbox:checked::before {
+        content: "";
+        width: 4px;
+        height: 8px;
+        border: solid white;
+        border-width: 0 1.5px 1.5px 0;
+        transform: rotate(45deg);
+        margin-bottom: 2px;
+    }
+
+    .task-content-block {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .task-headline {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-title);
+        line-height: 1.4;
+        word-break: break-word;
+    }
+    .task-headline.is-done {
+        text-decoration: line-through;
+        color: var(--text-faint);
+    }
+
+    .task-description {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 0.2rem;
+        line-height: 1.4;
+    }
+
+    .task-tail-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        opacity: 0.6;
+        transition: opacity 0.12s ease;
+    }
+    .task-entry:hover .task-tail-actions {
+        opacity: 1;
+    }
+
+    /* Subtasks Indented Tree Line */
+    .subtasks-branch {
+        padding-left: 2.85rem;
+        padding-right: 1rem;
+        padding-bottom: 0.65rem;
+        position: relative;
+    }
+    .subtasks-branch::before {
+        content: "";
+        position: absolute;
+        left: 1.55rem;
+        top: 0;
+        bottom: 1.25rem;
+        width: 1px;
+        background: #e5e5e5;
+    }
+
+    .subtask-leaf {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.35rem 0;
+        font-size: 0.825rem;
+    }
+    .subtask-leaf-title {
+        color: var(--text-body);
+        font-weight: 400;
+    }
+    .subtask-leaf-title.is-done {
+        text-decoration: line-through;
+        color: var(--text-faint);
+    }
+
+    /* Inline Add Subtask trigger and input */
+    .add-subtask-form {
+        display: flex;
+        gap: 0.4rem;
+        margin-top: 0.4rem;
+    }
+    .inline-subtask-input {
+        flex: 1;
+        padding: 0.3rem 0.55rem;
+        font-size: 0.775rem;
+        border: 1px solid var(--border-line);
+        border-radius: var(--radius-xs);
+        outline: none;
+        background: #fbfbfb;
+        font-family: inherit;
+        transition: border-color 0.1s ease, background 0.1s ease;
+    }
+    .inline-subtask-input:focus {
+        border-color: #171717;
+        background: #ffffff;
+    }
+
+    /* ================= RIGHT SIDE: NOTEBOOKS ================= */
+    .notebooks-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .notes-toolbar {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .notes-search-box {
+        flex: 1;
+        padding: 0.55rem 0.85rem;
+        font-size: 0.825rem;
+        border: 1px solid var(--border-line);
+        border-radius: var(--radius-sm);
+        background: var(--bg-surface);
+        outline: none;
+        font-family: inherit;
+        transition: border 0.1s ease;
+    }
+    .notes-search-box:focus {
+        border-color: #171717;
+    }
+
+    /* Notebook Composer */
+    .note-composer-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-line);
+        border-radius: var(--radius-md);
+        padding: 1.15rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .note-input-title {
+        width: 100%;
+        border: none;
+        border-bottom: 1px solid var(--border-subtle);
+        padding: 0.4rem 0.2rem 0.6rem;
+        font-family: inherit;
+        font-size: 0.925rem;
+        font-weight: 600;
+        outline: none;
+        color: var(--text-title);
+        margin-bottom: 0.65rem;
+    }
+    .note-input-title:focus {
+        border-bottom-color: #171717;
+    }
+
+    .note-input-body {
+        width: 100%;
+        border: none;
+        padding: 0.2rem;
+        font-family: inherit;
+        font-size: 0.825rem;
+        outline: none;
+        color: var(--text-body);
+        resize: vertical;
+        min-height: 65px;
+        line-height: 1.45;
+    }
+
+    .composer-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 0.65rem;
+        padding-top: 0.65rem;
+        border-top: 1px solid var(--border-subtle);
+    }
+
+    .palette-list {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .palette-circle {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 1.5px solid transparent;
+        transition: transform 0.1s ease;
+    }
+    .palette-circle:hover {
+        transform: scale(1.18);
+    }
+    .palette-circle.active {
+        border-color: #171717;
+    }
+
+    /* Handcrafted Paper Notebook Cards */
+    .notebook-deck {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
+    }
+
+    .sheet-card {
+        background: var(--sheet-bg, #ffffff);
+        border: 1px solid var(--border-line);
+        border-radius: var(--radius-md);
+        padding: 1.15rem;
+        position: relative;
+        transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    .sheet-card:hover {
+        border-color: #d4d4d4;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .sheet-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.45rem;
+    }
+    .sheet-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-title);
+    }
+
+    .sheet-text {
+        font-size: 0.825rem;
+        color: var(--text-body);
+        white-space: pre-line;
+        line-height: 1.5;
+        margin-bottom: 0.75rem;
+    }
+
+    .sheet-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.725rem;
+        color: var(--text-muted);
+        border-top: 1px solid rgba(0,0,0,0.05);
+        padding-top: 0.5rem;
+    }
+
+    .empty-slate {
+        text-align: center;
+        padding: 2.5rem 1rem;
+        color: var(--text-muted);
+        font-size: 0.825rem;
+        border: 1px dashed var(--border-line);
+        border-radius: var(--radius-md);
+        background: var(--bg-surface);
+    }
+</style>
+@endsection
+
+@section('content')
+<div class="columns-container">
+
+    <!-- ================= LEFT COLUMN: TASKS & SUBTASKS ================= -->
+    <div>
+        <div class="column-header">
+            <div>
+                <h2 class="column-title">
+                    <span>Tasks</span>
+                    <span class="counter-pill">{{ $completedRootTasks }}/{{ $totalRootTasks }}</span>
+                </h2>
+                <div class="header-subtext">Today's workflow and subtask breakdown</div>
+            </div>
+            
+            <div style="display: flex; gap: 0.3rem;">
+                <a href="{{ route('dashboard') }}" class="btn-press {{ !request('task_status') ? 'btn-primary-press' : '' }}" style="padding: 0.25rem 0.55rem; font-size: 0.75rem;">
+                    All
+                </a>
+                <a href="{{ route('dashboard', ['task_status' => 'pending']) }}" class="btn-press {{ request('task_status') == 'pending' ? 'btn-primary-press' : '' }}" style="padding: 0.25rem 0.55rem; font-size: 0.75rem;">
+                    Pending
+                </a>
+            </div>
+        </div>
+
+        <!-- Tactile Pressable Quick Task Input -->
+        <form action="{{ route('tasks.store') }}" method="POST" class="quick-task-box">
+            @csrf
+            <span class="quick-input-symbol">&gt;</span>
+            <input 
+                type="text" 
+                name="title" 
+                class="quick-task-input" 
+                placeholder="New task title... (Press Enter)" 
+                required 
+                autocomplete="off"
+                autofocus
+            >
+        </form>
+
+        <!-- Tasks Stream List -->
+        <div class="tasks-stream">
+            @forelse($tasks as $task)
+                <div class="task-entry">
+                    <div class="task-main-row">
+                        <!-- Round Checkbox with instant POST/PATCH -->
+                        <form action="{{ route('tasks.toggle', $task) }}" method="POST">
+                            @csrf
+                            @method('PATCH')
+                            <input 
+                                type="checkbox" 
+                                class="round-checkbox" 
+                                {{ $task->is_completed ? 'checked' : '' }} 
+                                onchange="this.form.submit()"
+                                title="Toggle complete"
+                            >
+                        </form>
+
+                        <div class="task-content-block">
+                            <div class="task-headline {{ $task->is_completed ? 'is-done' : '' }}">
+                                {{ $task->title }}
+                            </div>
+                            @if($task->description)
+                                <div class="task-description">{{ $task->description }}</div>
+                            @endif
+                        </div>
+
+                        <div class="task-tail-actions">
+                            <form action="{{ route('tasks.destroy', $task) }}" method="POST" onsubmit="return confirm('Delete task and subtasks?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn-danger-icon" title="Delete">✕</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Subtasks Indented Tree Branch -->
+                    <div class="subtasks-branch">
+                        @if($task->subtasks->count() > 0)
+                            <div style="display: flex; flex-direction: column; gap: 0.15rem; margin-bottom: 0.4rem;">
+                                @foreach($task->subtasks as $subtask)
+                                    <div class="subtask-leaf">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <form action="{{ route('tasks.toggle', $subtask) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input 
+                                                    type="checkbox" 
+                                                    class="round-checkbox" 
+                                                    style="width: 15px; height: 15px;" 
+                                                    {{ $subtask->is_completed ? 'checked' : '' }} 
+                                                    onchange="this.form.submit()"
+                                                >
+                                            </form>
+                                            <span class="subtask-leaf-title {{ $subtask->is_completed ? 'is-done' : '' }}">
+                                                {{ $subtask->title }}
+                                            </span>
+                                        </div>
+
+                                        <form action="{{ route('tasks.destroy', $subtask) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn-danger-icon" style="font-size: 0.75rem; padding: 0.15rem 0.3rem;">✕</button>
+                                        </form>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <!-- Minimal Inline Add Subtask Input -->
+                        <form action="{{ route('tasks.store') }}" method="POST" class="add-subtask-form">
+                            @csrf
+                            <input type="hidden" name="parent_id" value="{{ $task->id }}">
+                            <input 
+                                type="text" 
+                                name="title" 
+                                class="inline-subtask-input" 
+                                placeholder="+ Add subtask" 
+                                required 
+                                autocomplete="off"
+                            >
+                            <button type="submit" class="btn-press" style="padding: 0.2rem 0.5rem; font-size: 0.725rem;">
+                                Add
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @empty
+                <div class="empty-slate">
+                    No tasks yet. Type in the box above and press Enter.
+                </div>
+            @endforelse
+        </div>
+    </div>
+
+
+    <!-- ================= RIGHT SIDE: NOTEBOOKS ================= -->
+    <div class="notebooks-wrap">
+        <div class="column-header">
+            <div>
+                <h2 class="column-title">
+                    <span>Notebooks</span>
+                    <span class="counter-pill">{{ $totalNotes }}</span>
+                </h2>
+                <div class="header-subtext">Lecture points, viva prep & notes</div>
+            </div>
+        </div>
+
+        <!-- Notes Search Filter -->
+        <form action="{{ route('dashboard') }}" method="GET" class="notes-toolbar">
+            <input 
+                type="text" 
+                name="search" 
+                class="notes-search-box" 
+                placeholder="Search notes..." 
+                value="{{ request('search') }}"
+            >
+            <button type="submit" class="btn-press">Search</button>
+            @if(request('search'))
+                <a href="{{ route('dashboard') }}" class="btn-press">Reset</a>
+            @endif
+        </form>
+
+        <!-- Clean Notebook Sheet Composer -->
+        <form action="{{ route('notes.store') }}" method="POST" class="note-composer-card">
+            @csrf
+            <input 
+                type="text" 
+                name="title" 
+                class="note-input-title" 
+                placeholder="Note title (e.g. CSRF Token Concept)" 
+                required 
+                autocomplete="off"
+            >
+            <textarea 
+                name="content" 
+                class="note-input-body" 
+                placeholder="Write quick points or summary..."
+            ></textarea>
+
+            <div class="composer-bottom">
+                <div class="palette-list">
+                    @php
+                        $palettes = [
+                            '#ffffff' => 'Clean White',
+                            '#fffbeb' => 'Warm Cream',
+                            '#f0fdf4' => 'Pale Mint',
+                            '#f5f3ff' => 'Soft Lilac',
+                            '#fef2f2' => 'Pale Rose'
+                        ];
+                    @endphp
+                    @foreach($palettes as $hex => $label)
+                        <label style="cursor: pointer; line-height: 0;">
+                            <input type="radio" name="color" value="{{ $hex }}" {{ $loop->first ? 'checked' : '' }} style="display: none;" onchange="selectPalette(this)">
+                            <span class="palette-circle {{ $loop->first ? 'active' : '' }}" style="background: {{ $hex }}; border: 1px solid #d4d4d4;" title="{{ $label }}"></span>
+                        </label>
+                    @endforeach
+                </div>
+
+                <button type="submit" class="btn-press btn-primary-press">
+                    Save Note
+                </button>
+            </div>
+        </form>
+
+        <!-- Notebook Deck Cards -->
+        <div class="notebook-deck">
+            @forelse($notes as $note)
+                <div class="sheet-card" style="--sheet-bg: {{ $note->color ?? '#ffffff' }};">
+                    <div class="sheet-header">
+                        <div class="sheet-title">{{ $note->title }}</div>
+                        <form action="{{ route('notes.destroy', $note) }}" method="POST" onsubmit="return confirm('Delete this note?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn-danger-icon" title="Delete note">✕</button>
+                        </form>
+                    </div>
+
+                    @if($note->content)
+                        <div class="sheet-text">{{ $note->content }}</div>
+                    @endif
+
+                    <div class="sheet-footer">
+                        <span>{{ $note->created_at->format('M d, Y') }}</span>
+                        <span>NOTE</span>
+                    </div>
+                </div>
+            @empty
+                <div class="empty-slate">
+                    No notes in notebook yet. Write a note above to store key points.
+                </div>
+            @endforelse
+        </div>
+    </div>
+
+</div>
+@endsection
+
+@section('scripts')
+<script>
+    function selectPalette(radio) {
+        document.querySelectorAll('.palette-circle').forEach(el => el.classList.remove('active'));
+        radio.nextElementSibling.classList.add('active');
+    }
+</script>
+@endsection
