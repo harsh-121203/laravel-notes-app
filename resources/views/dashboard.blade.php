@@ -4,13 +4,22 @@
 
 @section('content')
 <div id="workspaceRoot">
-    <!-- Top Calendar Navigation Strip -->
-    @include('partials.calendar')
+    <!-- Modern Three-Column Architecture -->
+    <div class="three-column-layout">
+        <!-- Left Sidebar: Calendar / Timeline -->
+        <aside class="left-sidebar">
+            @include('partials.calendar')
+        </aside>
 
-    <!-- Two-Column Architecture: Tasks (Left) & Notebooks (Right) -->
-    <div class="columns-container">
-        @include('partials.tasks.task-list')
-        @include('partials.notes.note-list')
+        <!-- Center Column: Tasks -->
+        <section class="center-tasks">
+            @include('partials.tasks.task-list')
+        </section>
+
+        <!-- Right Column: Notebook -->
+        <section class="right-notes">
+            @include('partials.notes.note-list')
+        </section>
     </div>
 </div>
 @endsection

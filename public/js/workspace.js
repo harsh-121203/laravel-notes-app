@@ -263,7 +263,6 @@ function navigateWorkspace(url, pushState = true) {
     isFetching = true;
 
     const root = document.getElementById('workspaceRoot');
-    if (root) root.classList.add('is-transitioning');
 
     fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(res => {
@@ -285,7 +284,6 @@ function navigateWorkspace(url, pushState = true) {
         })
         .finally(() => {
             isFetching = false;
-            if (root) root.classList.remove('is-transitioning');
         });
 }
 
@@ -379,7 +377,7 @@ function bindInteractiveEvents() {
     };
 
     // Intercept all calendar navigation links and filter pills
-    document.querySelectorAll('.day-pill-cell, .calendar-quick-pills a, .calendar-nav-group a.btn-press, .column-header a.btn-press').forEach(el => {
+    document.querySelectorAll('.cal-day-cell, .calendar-quick-pills a, .calendar-nav-group a.btn-press, .column-header a.btn-press').forEach(el => {
         el.addEventListener('click', function(e) {
             e.preventDefault();
             navigateWorkspace(this.href);

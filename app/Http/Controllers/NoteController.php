@@ -62,7 +62,9 @@ class NoteController extends Controller
             });
 
         // 3. Fetch Notes with optional search query & color filter
-        $notesQuery = Note::query();
+        $notesQuery = Note::query()
+            ->whereDate('created_at', $selectedDateStr);
+
         if ($request->filled('search')) {
             $term = $request->input('search');
             $notesQuery->where(function ($q) use ($term) {
@@ -73,7 +75,7 @@ class NoteController extends Controller
         if ($request->filled('color')) {
             $notesQuery->where('color', $request->color);
         }
-        $notes = $notesQuery->latest()->get();
+        $notes = $notesQuery->with('tasks')->latest()->get();
 
         // 4. Computed stats for selected day
         $totalRootTasks = Task::whereNull('parent_id')->whereDate('task_date', $selectedDateStr)->count();

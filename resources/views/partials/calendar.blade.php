@@ -2,7 +2,7 @@
 <div class="calendar-widget-card" id="calendarWidget">
     <div class="calendar-header-row">
         <div class="calendar-current-label">
-            <span>🗓️ {{ $parsedSelectedDate->format('F Y') }}</span>
+            <span>🗓️ {{ $parsedSelectedDate->format('M Y') }}</span>
             @if($isToday)
                 <span class="counter-pill status-badge-today">TODAY</span>
             @elseif($isPastDate)
@@ -44,33 +44,42 @@
         </div>
     </div>
 
-    <!-- 7-Day Rolling Day Strip around Selected Date -->
-    <div class="week-strip-grid">
-        @for($i = -3; $i <= 3; $i++)
+    <!-- Monthly Calendar Grid -->
+    <div class="monthly-calendar-grid">
+        <div class="cal-day-header">Su</div>
+        <div class="cal-day-header">Mo</div>
+        <div class="cal-day-header">Tu</div>
+        <div class="cal-day-header">We</div>
+        <div class="cal-day-header">Th</div>
+        <div class="cal-day-header">Fr</div>
+        <div class="cal-day-header">Sa</div>
+
+        @php
+            $startOfMonth = $parsedSelectedDate->copy()->startOfMonth();
+            $startDate = $startOfMonth->copy()->startOfWeek(\Carbon\Carbon::SUNDAY);
+        @endphp
+
+        @for($i = 0; $i < 42; $i++)
             @php
-                $dayCursor = $parsedSelectedDate->copy()->addDays($i);
+                $dayCursor = $startDate->copy()->addDays($i);
                 $dayCursorStr = $dayCursor->toDateString();
                 $isCellSelected = ($dayCursorStr === $selectedDateStr);
                 $isCellToday = $dayCursor->isToday();
                 $isCellPast = $dayCursor->lt(now()->startOfDay());
+                $isCurrentMonth = $dayCursor->month === $parsedSelectedDate->month;
                 $dayData = $taskCountsByDate->get($dayCursorStr);
                 $totalCount = $dayData ? $dayData->count : 0;
                 $doneCount = $dayData ? $dayData->completed_count : 0;
             @endphp
             <a 
                 href="{{ route('dashboard', ['date' => $dayCursorStr]) }}" 
-                class="day-pill-cell {{ $isCellSelected ? 'is-selected-day' : '' }} {{ $isCellToday ? 'is-today-indicator' : '' }} {{ $isCellPast ? 'is-past-day' : '' }}"
+                class="cal-day-cell {{ $isCellSelected ? 'is-selected' : '' }} {{ $isCellToday ? 'is-today' : '' }} {{ !$isCurrentMonth ? 'is-other-month' : '' }} {{ $isCellPast ? 'is-past' : '' }}"
                 title="{{ $dayCursor->format('l, M d, Y') }}"
             >
-                <span class="day-pill-name">{{ $dayCursor->format('D') }}</span>
-                <span class="day-pill-num">{{ $dayCursor->format('j') }}</span>
-                <div class="day-pill-dots">
-                    @if($totalCount > 0)
-                        @for($d = 0; $d < min($totalCount, 3); $d++)
-                            <span class="task-dot {{ $d < $doneCount ? 'done' : '' }}"></span>
-                        @endfor
-                    @endif
-                </div>
+                <span class="cal-day-num">{{ $dayCursor->format('j') }}</span>
+                @if($totalCount > 0)
+                    <div class="cal-day-dot {{ $doneCount >= $totalCount && $totalCount > 0 ? 'done' : '' }}"></div>
+                @endif
             </a>
         @endfor
     </div>
