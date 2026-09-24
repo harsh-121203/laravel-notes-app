@@ -41,7 +41,7 @@ class TaskController extends Controller
 
         Task::create([
             'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
+            'description' => $validated['description'] ?? $validated['note_content'] ?? null,
             'parent_id' => $validated['parent_id'] ?? null,
             'note_id' => $noteId,
             'is_completed' => false,

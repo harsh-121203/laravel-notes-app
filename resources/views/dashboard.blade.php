@@ -55,45 +55,102 @@
 
     /* ================= LEFT SIDE: TASKS & SUBTASKS ================= */
 
-    /* Quick Add Task Input Box with tactile press states */
-    .quick-task-box {
-        position: relative;
+    /* Task Composer Card */
+    .task-composer-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-line);
+        border-radius: var(--radius-md);
+        padding: 0.85rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.03);
         margin-bottom: 1.5rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .task-composer-card:focus-within,
+    .task-composer-card.is-expanded {
+        border-color: #171717;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
     }
 
     .quick-task-input {
         width: 100%;
-        padding: 0.75rem 1rem 0.75rem 2.4rem;
+        padding: 0.65rem 0.85rem 0.65rem 2.2rem;
         font-family: inherit;
         font-size: 0.9rem;
-        font-weight: 500;
+        font-weight: 600;
         color: var(--text-title);
-        background: var(--bg-surface);
-        border: 1.5px solid #171717;
+        background: #fcfcfc;
+        border: 1px solid var(--border-line);
         border-radius: var(--radius-sm);
-        box-shadow: 2px 2px 0px #171717;
         outline: none;
-        transition: transform 0.08s ease, box-shadow 0.08s ease;
+        transition: border-color 0.12s ease, background 0.12s ease;
     }
     .quick-task-input:focus {
-        transform: translate(-1px, -1px);
-        box-shadow: 3px 3px 0px #171717;
-    }
-    .quick-task-input:active {
-        transform: translate(1px, 1px);
-        box-shadow: 1px 1px 0px #171717;
+        border-color: #171717;
+        background: #ffffff;
     }
 
     .quick-input-symbol {
         position: absolute;
-        left: 0.85rem;
+        left: 0.75rem;
         top: 50%;
         transform: translateY(-50%);
-        font-size: 1.1rem;
+        font-size: 1rem;
         color: var(--text-muted);
         pointer-events: none;
         user-select: none;
         font-family: monospace;
+    }
+
+    /* Expandable Slide-Out Drawer */
+    .task-composer-drawer {
+        display: grid;
+        grid-template-rows: 0fr;
+        opacity: 0;
+        transition: grid-template-rows 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, margin-top 0.22s ease;
+        margin-top: 0;
+    }
+    .task-composer-drawer-inner {
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+    .task-composer-card.is-expanded .task-composer-drawer {
+        grid-template-rows: 1fr;
+        opacity: 1;
+        margin-top: 0.65rem;
+    }
+
+    .task-note-textarea {
+        width: 100%;
+        padding: 0.65rem 0.85rem;
+        font-family: inherit;
+        font-size: 0.85rem;
+        color: var(--text-body);
+        background: #fafafa;
+        border: 1px solid var(--border-line);
+        border-radius: var(--radius-sm);
+        outline: none;
+        resize: vertical;
+        min-height: 85px;
+        line-height: 1.45;
+        transition: border-color 0.12s ease, background 0.12s ease;
+    }
+    .task-note-textarea:focus {
+        border-color: #171717;
+        background: #ffffff;
+    }
+
+    .task-composer-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 0.2rem;
+    }
+
+    .composer-hint {
+        font-size: 0.75rem;
+        color: var(--text-muted);
     }
 
     /* Clean Tree / List UI for Tasks */
@@ -345,14 +402,14 @@
     .note-input-body {
         width: 100%;
         border: none;
-        padding: 0.2rem;
+        padding: 0.4rem 0.2rem;
         font-family: inherit;
-        font-size: 0.825rem;
+        font-size: 0.85rem;
         outline: none;
         color: var(--text-body);
         resize: vertical;
-        min-height: 65px;
-        line-height: 1.45;
+        min-height: 110px;
+        line-height: 1.5;
     }
 
     .composer-bottom {
@@ -479,29 +536,45 @@
             </div>
         </div>
 
-        <!-- Tactile Pressable Quick Task Input -->
-        <form action="{{ route('tasks.store') }}" method="POST" class="quick-task-box">
+        <!-- Tactile Pressable Task Composer with Smooth Slide-Out Drawer -->
+        <form action="{{ route('tasks.store') }}" method="POST" class="task-composer-card" id="taskComposerCard">
             @csrf
             <div style="position: relative;">
                 <span class="quick-input-symbol">&gt;</span>
                 <input 
                     type="text" 
                     name="title" 
+                    id="taskTitleInput"
                     class="quick-task-input" 
-                    placeholder="New task title..." 
+                    placeholder="Task title (e.g. Complete Web Dev Assignment)..." 
                     required 
                     autocomplete="off"
-                    autofocus
                 >
             </div>
-            <input 
-                type="text" 
-                name="note_content" 
-                class="quick-task-input" 
-                style="margin-top: 0.5rem; font-size: 0.8rem; padding: 0.5rem 1rem; border-color: #e5e5e5; box-shadow: none;" 
-                placeholder="Optional attached note... (Press Enter to save)" 
-                autocomplete="off"
-            >
+            
+            <div class="task-composer-drawer" id="taskComposerDrawer">
+                <div class="task-composer-drawer-inner">
+                    <textarea 
+                        name="note_content" 
+                        id="taskNoteInput"
+                        class="task-note-textarea" 
+                        placeholder="Attach a detailed note or summary to this task (optional)..." 
+                        rows="3"
+                    ></textarea>
+
+                    <div class="task-composer-footer">
+                        <span class="composer-hint">Attach notes seamlessly to tasks</span>
+                        <div style="display: flex; gap: 0.4rem;">
+                            <button type="button" class="btn-press" onclick="collapseTaskComposer()" style="padding: 0.35rem 0.65rem; font-size: 0.775rem;">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn-press btn-primary-press">
+                                + Save Task
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </form>
 
         @php
@@ -781,5 +854,48 @@
             noteEl.classList.add('note-highlight');
         }
     }
+
+    // Dynamic Task Composer Expand / Slide-out Logic
+    const composerCard = document.getElementById('taskComposerCard');
+    const taskTitleInput = document.getElementById('taskTitleInput');
+    const taskNoteInput = document.getElementById('taskNoteInput');
+
+    function expandTaskComposer() {
+        if (composerCard) {
+            composerCard.classList.add('is-expanded');
+        }
+    }
+
+    function collapseTaskComposer() {
+        if (composerCard) {
+            // Only collapse if both fields are empty
+            if (!taskTitleInput.value.trim() && !taskNoteInput.value.trim()) {
+                composerCard.classList.remove('is-expanded');
+            } else {
+                taskTitleInput.value = '';
+                taskNoteInput.value = '';
+                composerCard.classList.remove('is-expanded');
+            }
+        }
+    }
+
+    if (taskTitleInput) {
+        // Expand when user focuses or types in the task name
+        taskTitleInput.addEventListener('focus', expandTaskComposer);
+        taskTitleInput.addEventListener('input', function() {
+            if (this.value.trim().length > 0) {
+                expandTaskComposer();
+            }
+        });
+    }
+
+    // Collapse if clicked outside and inputs are empty
+    document.addEventListener('click', function(e) {
+        if (composerCard && !composerCard.contains(e.target)) {
+            if (!taskTitleInput.value.trim() && !taskNoteInput.value.trim()) {
+                composerCard.classList.remove('is-expanded');
+            }
+        }
+    });
 </script>
 @endsection
