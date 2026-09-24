@@ -24,7 +24,10 @@ class NoteController extends Controller
                 $tasksQuery->where('is_completed', false);
             }
         }
-        $tasks = $tasksQuery->latest()->get();
+        // Order tasks so pending items stay on top, completed items sink to the bottom
+        $tasks = $tasksQuery->orderBy('is_completed', 'asc')
+                            ->orderBy('updated_at', 'desc')
+                            ->get();
 
         // 2. Fetch Notes with optional search query & color filter
         $notesQuery = Note::query();

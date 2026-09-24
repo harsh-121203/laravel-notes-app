@@ -131,6 +131,34 @@
         opacity: 0.5;
     }
 
+    /* Completed Tasks Dedicated Collapsible Section */
+    .completed-section-details {
+        user-select: none;
+    }
+    .completed-summary-bar {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        padding: 0.4rem 0.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        list-style: none;
+    }
+    .completed-summary-bar::-webkit-details-marker {
+        display: none;
+    }
+    .completed-summary-bar .toggle-icon {
+        font-size: 0.7rem;
+        transition: transform 0.15s ease;
+    }
+    .completed-section-details[open] .completed-summary-bar .toggle-icon {
+        transform: rotate(180deg);
+    }
+
     .task-main-row {
         display: flex;
         align-items: flex-start;
@@ -458,10 +486,15 @@
             >
         </form>
 
+        @php
+            $activeTasks = $tasks->where('is_completed', false);
+            $completedTasks = $tasks->where('is_completed', true);
+        @endphp
+
         <!-- Tasks Stream List -->
         <div class="tasks-stream">
-            @forelse($tasks as $task)
-                <div class="task-entry {{ $task->is_completed ? 'is-completed-entry' : '' }}">
+            @forelse($activeTasks as $task)
+                <div class="task-entry">
                     <div class="task-main-row">
                         <!-- Round Checkbox with instant POST/PATCH -->
                         <form action="{{ route('tasks.toggle', $task) }}" method="POST">
@@ -477,7 +510,7 @@
                         </form>
 
                         <div class="task-content-block">
-                            <div class="task-headline {{ $task->is_completed ? 'is-done' : '' }}">
+                            <div class="task-headline">
                                 {{ $task->title }}
                             </div>
                             @if($task->description)
@@ -547,10 +580,57 @@
                 </div>
             @empty
                 <div class="empty-slate">
-                    No tasks yet. Type in the box above and press Enter.
+                    No active tasks. Add one above!
                 </div>
             @endforelse
         </div>
+
+        <!-- Separate Dedicated Completed Section at Bottom -->
+        @if($completedTasks->count() > 0)
+            <details class="completed-section-details" open style="margin-top: 1.5rem;">
+                <summary class="completed-summary-bar">
+                    <span>Completed Tasks ({{ $completedTasks->count() }})</span>
+                    <span class="toggle-icon">▼</span>
+                </summary>
+
+                <div class="tasks-stream completed-stream" style="margin-top: 0.75rem;">
+                    @foreach($completedTasks as $task)
+                        <div class="task-entry is-completed-entry">
+                            <div class="task-main-row">
+                                <form action="{{ route('tasks.toggle', $task) }}" method="POST">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input 
+                                        type="checkbox" 
+                                        class="round-checkbox" 
+                                        checked 
+                                        onchange="this.form.submit()"
+                                        title="Mark incomplete"
+                                    >
+                                </form>
+
+                                <div class="task-content-block">
+                                    <div class="task-headline is-done">
+                                        {{ $task->title }}
+                                    </div>
+                                    @if($task->description)
+                                        <div class="task-description">{{ $task->description }}</div>
+                                    @endif
+                                </div>
+
+                                <div class="task-tail-actions">
+                                    <form action="{{ route('tasks.destroy', $task) }}" method="POST" onsubmit="return confirm('Delete task and subtasks?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn-danger-icon" title="Delete">✕</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </details>
+        @endif
     </div>
 
 
