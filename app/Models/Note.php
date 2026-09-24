@@ -22,4 +22,12 @@ class Note extends Model
     protected $casts = [
         'is_completed' => 'boolean',
     ];
+
+    /**
+     * Tasks linked to this note
+     */
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
 }

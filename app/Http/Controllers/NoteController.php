@@ -13,8 +13,8 @@ class NoteController extends Controller
      */
     public function index(Request $request)
     {
-        // 1. Fetch top-level Tasks with their eager-loaded Subtasks (prevents N+1 query problem)
-        $tasksQuery = Task::whereNull('parent_id')->with('subtasks');
+        // 1. Fetch top-level Tasks with their eager-loaded Subtasks and note (prevents N+1 query problem)
+        $tasksQuery = Task::whereNull('parent_id')->with(['subtasks', 'note']);
 
         // Optional filter for tasks
         if ($request->filled('task_status')) {

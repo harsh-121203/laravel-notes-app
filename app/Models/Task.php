@@ -11,6 +11,7 @@ class Task extends Model
         'title',
         'description',
         'is_completed',
+        'note_id',
     ];
 
     protected $casts = [
@@ -31,5 +32,13 @@ class Task extends Model
     public function subtasks()
     {
         return $this->hasMany(Task::class, 'parent_id')->latest();
+    }
+
+    /**
+     * Note linked to this task
+     */
+    public function note()
+    {
+        return $this->belongsTo(Note::class);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Note;
 use App\Models\Task;
 use Illuminate\Http\Request;
 
@@ -15,6 +16,7 @@ class TaskController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'note_content' => 'nullable|string',
             // parent_id must refer to a top‑level task (no parent) to avoid sub‑subtasks
             'parent_id' => ['nullable', 'exists:tasks,id', function ($attribute, $value, $fail) {
                 if ($value) {
@@ -26,10 +28,22 @@ class TaskController extends Controller
             }],
         ]);
 
+        $noteId = null;
+        if (!empty($validated['note_content'])) {
+            $note = Note::create([
+                'title' => 'Task Note: ' . $validated['title'],
+                'content' => $validated['note_content'],
+                'color' => '#ffffff', // Default color
+                'is_completed' => false,
+            ]);
+            $noteId = $note->id;
+        }
+
         Task::create([
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'parent_id' => $validated['parent_id'] ?? null,
+            'note_id' => $noteId,
             'is_completed' => false,
         ]);
 

@@ -444,6 +444,14 @@
         border-radius: var(--radius-md);
         background: var(--bg-surface);
     }
+    
+    @keyframes noteHighlight {
+        0% { box-shadow: 0 0 0 3px var(--primary, #171717); transform: scale(1.02); }
+        100% { box-shadow: 0 1px 3px rgba(0,0,0,0.02); transform: scale(1); }
+    }
+    .note-highlight {
+        animation: noteHighlight 1.5s ease-out;
+    }
 </style>
 @endsection
 
@@ -474,15 +482,25 @@
         <!-- Tactile Pressable Quick Task Input -->
         <form action="{{ route('tasks.store') }}" method="POST" class="quick-task-box">
             @csrf
-            <span class="quick-input-symbol">&gt;</span>
+            <div style="position: relative;">
+                <span class="quick-input-symbol">&gt;</span>
+                <input 
+                    type="text" 
+                    name="title" 
+                    class="quick-task-input" 
+                    placeholder="New task title..." 
+                    required 
+                    autocomplete="off"
+                    autofocus
+                >
+            </div>
             <input 
                 type="text" 
-                name="title" 
+                name="note_content" 
                 class="quick-task-input" 
-                placeholder="New task title... (Press Enter)" 
-                required 
+                style="margin-top: 0.5rem; font-size: 0.8rem; padding: 0.5rem 1rem; border-color: #e5e5e5; box-shadow: none;" 
+                placeholder="Optional attached note... (Press Enter to save)" 
                 autocomplete="off"
-                autofocus
             >
         </form>
 
@@ -512,13 +530,18 @@
                         <div class="task-content-block">
                             <div class="task-headline">
                                 {{ $task->title }}
-                            </div>
+                            </div>  
                             @if($task->description)
                                 <div class="task-description">{{ $task->description }}</div>
                             @endif
                         </div>
 
                         <div class="task-tail-actions">
+                            @if($task->note_id)
+                                <button type="button" onclick="scrollToNote({{ $task->note_id }})" class="btn-press" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; border: none; box-shadow: none; background: transparent; color: var(--text-muted);" title="View Attached Note">
+                                    📎 Note
+                                </button>
+                            @endif
                             <form action="{{ route('tasks.destroy', $task) }}" method="POST" onsubmit="return confirm('Delete task and subtasks?');">
                                 @csrf
                                 @method('DELETE')
@@ -619,6 +642,11 @@
                                 </div>
 
                                 <div class="task-tail-actions">
+                                    @if($task->note_id)
+                                        <button type="button" onclick="scrollToNote({{ $task->note_id }})" class="btn-press" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; border: none; box-shadow: none; background: transparent; color: var(--text-muted);" title="View Attached Note">
+                                            📎 Note
+                                        </button>
+                                    @endif
                                     <form action="{{ route('tasks.destroy', $task) }}" method="POST" onsubmit="return confirm('Delete task and subtasks?');">
                                         @csrf
                                         @method('DELETE')
@@ -706,7 +734,7 @@
         <!-- Notebook Deck Cards -->
         <div class="notebook-deck">
             @forelse($notes as $note)
-                <div class="sheet-card" style="--sheet-bg: {{ $note->color ?? '#ffffff' }};">
+                <div class="sheet-card" id="note-{{ $note->id }}" style="--sheet-bg: {{ $note->color ?? '#ffffff' }};">
                     <div class="sheet-header">
                         <div class="sheet-title">{{ $note->title }}</div>
                         <form action="{{ route('notes.destroy', $note) }}" method="POST" onsubmit="return confirm('Delete this note?');">
@@ -741,6 +769,17 @@
     function selectPalette(radio) {
         document.querySelectorAll('.palette-circle').forEach(el => el.classList.remove('active'));
         radio.nextElementSibling.classList.add('active');
+    }
+
+    function scrollToNote(noteId) {
+        const noteEl = document.getElementById('note-' + noteId);
+        if (noteEl) {
+            noteEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            noteEl.classList.remove('note-highlight');
+            // Trigger reflow
+            void noteEl.offsetWidth;
+            noteEl.classList.add('note-highlight');
+        }
     }
 </script>
 @endsection
