@@ -10,222 +10,50 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <style>
-        :root {
-            /* Clean Minimalist Palette (Todoist / Linux GTK inspired) */
-            --bg-canvas: #fafafa;
-            --bg-surface: #ffffff;
-            --border-subtle: #f0f0f0;
-            --border-line: #e5e5e5;
-            --border-active: #262626;
+    <!-- Central Design Tokens & Theme Stylesheet -->
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 
-            --text-title: #171717;
-            --text-body: #404040;
-            --text-muted: #737373;
-            --text-faint: #a3a3a3;
+    <!-- Early Theme Loader to prevent flash of wrong theme -->
+    <script>
+        (function() {
+            try {
+                function isColorDark(hex) {
+                    if (!hex || typeof hex !== 'string') return false;
+                    var h = hex.trim().replace('#', '');
+                    if (h.length === 3) h = h.split('').map(function(c) { return c + c; }).join('');
+                    if (h.length !== 6) return false;
+                    var r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
+                    return ((0.299 * r + 0.587 * g + 0.114 * b) / 255) < 0.5;
+                }
 
-            --accent: #dc2626;
-            --accent-soft: #fef2f2;
-            --forest: #166534;
-            --forest-soft: #f0fdf4;
-            --amber-soft: #fffbeb;
+                var saved = localStorage.getItem('workspace_custom_theme');
+                if (saved) {
+                    var parsed = JSON.parse(saved);
+                    if (parsed && parsed.vars) {
+                        var root = document.documentElement;
+                        for (var key in parsed.vars) {
+                            root.style.setProperty(key, parsed.vars[key]);
+                        }
+                        var canvas = parsed.vars['--bg-canvas'] || '#fafafa';
+                        var surface = parsed.vars['--bg-surface'] || '#ffffff';
+                        var accent = parsed.vars['--accent'] || '#111827';
+                        var isDark = isColorDark(canvas) || isColorDark(surface);
+                        var isAccDark = isColorDark(accent);
 
-            --radius-xs: 4px;
-            --radius-sm: 6px;
-            --radius-md: 8px;
-            --radius-lg: 12px;
-        }
+                        root.style.setProperty('--color-scheme', isDark ? 'dark' : 'light');
+                        root.style.setProperty('--calendar-icon-filter', isDark ? 'invert(1)' : 'none');
+                        root.style.setProperty('--border-subtle', isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)');
+                        root.style.setProperty('--btn-hover-bg', isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)');
+                        root.style.setProperty('--item-hover-bg', isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)');
+                        root.style.setProperty('--badge-bg', isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)');
+                        root.style.setProperty('--accent-contrast', isAccDark ? '#ffffff' : '#111827');
+                        root.style.colorScheme = isDark ? 'dark' : 'light';
+                    }
+                }
+            } catch(e) {}
+        })();
+    </script>
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        html {
-            overflow-y: scroll; /* Prevents scrollbar layout jumps */
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-canvas);
-            color: var(--text-body);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* Top Minimal Header (No emojis, no heavy badges) */
-        header.app-topbar {
-            background: var(--bg-surface);
-            border-bottom: 1px solid var(--border-line);
-            height: 52px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 1.5rem;
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-
-        .topbar-left {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .app-title-mark {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--text-title);
-            letter-spacing: -0.02em;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .dot-indicator {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--accent);
-            display: inline-block;
-        }
-
-        .topbar-right {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .academic-badge {
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            border: 1px solid var(--border-line);
-            padding: 0.2rem 0.55rem;
-            border-radius: var(--radius-xs);
-            background: #fdfdfd;
-        }
-
-        /* Toast Container fixed without moving DOM flow */
-        .toast-slot {
-            position: fixed;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            pointer-events: none;
-        }
-
-        .toast-msg {
-            pointer-events: auto;
-            background: #171717;
-            color: #ffffff;
-            font-size: 0.825rem;
-            font-weight: 500;
-            padding: 0.65rem 1.1rem;
-            border-radius: var(--radius-sm);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            animation: slideIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes slideIn {
-            from { transform: translateY(8px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        /* Buttons with tactile click depression */
-        .btn-press {
-            appearance: none;
-            border: 1px solid var(--border-line);
-            background: var(--bg-surface);
-            color: var(--text-title);
-            font-family: inherit;
-            font-size: 0.825rem;
-            font-weight: 600;
-            padding: 0.45rem 0.85rem;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            text-decoration: none;
-            transition: background 0.1s ease, border-color 0.1s ease, transform 0.08s ease, box-shadow 0.08s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            user-select: none;
-        }
-        .btn-press:hover {
-            background: #f5f5f5;
-            border-color: #d4d4d4;
-        }
-        .btn-press:active {
-            transform: translateY(1px);
-            box-shadow: 0 0 0 rgba(0,0,0,0);
-        }
-
-        .btn-primary-press {
-            background: #171717;
-            color: #ffffff;
-            border-color: #171717;
-        }
-        .btn-primary-press:hover {
-            background: #262626;
-            border-color: #262626;
-        }
-        .btn-primary-press:active {
-            transform: translateY(1px);
-            background: #000000;
-        }
-
-        .btn-danger-icon {
-            background: transparent;
-            border: none;
-            color: var(--text-faint);
-            cursor: pointer;
-            padding: 0.25rem 0.4rem;
-            border-radius: var(--radius-xs);
-            font-size: 0.85rem;
-            line-height: 1;
-            transition: all 0.12s ease;
-        }
-        .btn-danger-icon:hover {
-            color: var(--accent);
-            background: var(--accent-soft);
-        }
-        .btn-danger-icon:active {
-            transform: scale(0.92);
-        }
-
-        /* Main Workspace Canvas */
-        main.main-viewport {
-            flex: 1;
-            max-width: 1300px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 2rem 1.5rem 3.5rem;
-        }
-
-        footer.app-foot {
-            border-top: 1px solid var(--border-line);
-            padding: 1rem 0;
-            background: var(--bg-surface);
-            text-align: center;
-            font-size: 0.775rem;
-            color: var(--text-muted);
-        }
-    </style>
     @yield('styles')
 </head>
 <body>
@@ -239,20 +67,41 @@
         </div>
 
         <div class="topbar-right">
+            <!-- Theme Studio Settings Trigger -->
+            <button type="button" class="btn-press" onclick="openThemeModal()" style="font-size: 0.775rem; padding: 0.3rem 0.65rem;" title="Customize App Theme & Colors">
+                🎨 Theme
+            </button>
             <span class="academic-badge">Laravel MVC</span>
             <span>Local Database</span>
         </div>
     </header>
 
-    <!-- Fixed Floating Toast Notification (Does not push content down) -->
-    @if(session('success'))
-        <div class="toast-slot">
+    <!-- Theme Studio Modal -->
+    @include('partials.theme-modal')
+
+    <!-- Fixed Floating Toast Notification -->
+    <div class="toast-slot">
+        @if(session('success'))
             <div class="toast-msg">
                 <span>{{ session('success') }}</span>
-                <span style="cursor: pointer; opacity: 0.7;" onclick="this.parentElement.remove();">&times;</span>
+                <span style="cursor: pointer; opacity: 0.7; margin-left: auto;" onclick="this.parentElement.remove();">&times;</span>
             </div>
-        </div>
-    @endif
+        @endif
+
+        @if(session('error'))
+            <div class="toast-msg" style="background: #dc2626;">
+                <span>{{ session('error') }}</span>
+                <span style="cursor: pointer; opacity: 0.7; margin-left: auto;" onclick="this.parentElement.remove();">&times;</span>
+            </div>
+        @endif
+
+        @if($errors->any())
+            <div class="toast-msg" style="background: #dc2626;">
+                <span>{{ $errors->first() }}</span>
+                <span style="cursor: pointer; opacity: 0.7; margin-left: auto;" onclick="this.parentElement.remove();">&times;</span>
+            </div>
+        @endif
+    </div>
 
     <!-- Content Viewport -->
     <main class="main-viewport">
@@ -260,9 +109,11 @@
     </main>
 
     <footer class="app-foot">
-        <p>Built with Laravel 12 & Native Blade • Minimalist Two-Column Architecture</p>
+        <p>Built with Laravel 12 & Native Blade • Modular Architecture</p>
     </footer>
 
+    <!-- Central Workspace Controller Script -->
+    <script src="{{ asset('js/workspace.js') }}"></script>
     @yield('scripts')
 </body>
 </html>

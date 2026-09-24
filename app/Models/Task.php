@@ -12,10 +12,12 @@ class Task extends Model
         'description',
         'is_completed',
         'note_id',
+        'task_date',
     ];
 
     protected $casts = [
         'is_completed' => 'boolean',
+        'task_date' => 'date:Y-m-d',
     ];
 
     /**
