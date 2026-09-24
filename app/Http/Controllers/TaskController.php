@@ -15,7 +15,15 @@ class TaskController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'parent_id' => 'nullable|exists:tasks,id',
+            // parent_id must refer to a top‑level task (no parent) to avoid sub‑subtasks
+            'parent_id' => ['nullable', 'exists:tasks,id', function ($attribute, $value, $fail) {
+                if ($value) {
+                    $parent = Task::find($value);
+                    if ($parent && $parent->parent_id !== null) {
+                        $fail('You cannot create a subtask of a subtask.');
+                    }
+                }
+            }],
         ]);
 
         Task::create([

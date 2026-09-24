@@ -109,13 +109,26 @@
 
     .task-entry {
         border-bottom: 1px solid var(--border-subtle);
-        transition: background-color 0.12s ease;
+        transition: background-color 0.12s ease, opacity 0.3s ease, filter 0.3s ease;
     }
     .task-entry:last-child {
         border-bottom: none;
     }
     .task-entry:hover {
         background-color: #fafafa;
+    }
+    .task-entry.is-completed-entry {
+        opacity: 0.55;
+        background-color: #fbfbfb;
+        filter: grayscale(0.3);
+    }
+    .task-entry.is-completed-entry:hover {
+        opacity: 0.85;
+        filter: grayscale(0);
+    }
+
+    .subtask-leaf.is-completed-leaf {
+        opacity: 0.5;
     }
 
     .task-main-row {
@@ -448,7 +461,7 @@
         <!-- Tasks Stream List -->
         <div class="tasks-stream">
             @forelse($tasks as $task)
-                <div class="task-entry">
+                <div class="task-entry {{ $task->is_completed ? 'is-completed-entry' : '' }}">
                     <div class="task-main-row">
                         <!-- Round Checkbox with instant POST/PATCH -->
                         <form action="{{ route('tasks.toggle', $task) }}" method="POST">
@@ -486,7 +499,7 @@
                         @if($task->subtasks->count() > 0)
                             <div style="display: flex; flex-direction: column; gap: 0.15rem; margin-bottom: 0.4rem;">
                                 @foreach($task->subtasks as $subtask)
-                                    <div class="subtask-leaf">
+                                    <div class="subtask-leaf {{ $subtask->is_completed ? 'is-completed-leaf' : '' }}">
                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                                             <form action="{{ route('tasks.toggle', $subtask) }}" method="POST">
                                                 @csrf
